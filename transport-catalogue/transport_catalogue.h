@@ -1,1 +1,87 @@
-// место для вашего кода
+#pragma once
+
+#include <deque>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <unordered_map>
+
+#include "geo.h"
+
+namespace transport {
+
+// Остановки
+struct Stop {
+	std::string id;
+	geo::Coordinates coordinates;
+};
+
+// Маршруты
+struct Bus {
+	std::string id;
+	std::vector<const Stop*> stops;
+};
+
+// Информация о маршруте
+struct BusInfo {
+	size_t stop_count = 0;
+	size_t unique_stop_count = 0;
+	double length = 0;
+};
+
+class TransportCatalogue {
+public:
+	/**
+	 * Добавляет остановку в базу данных
+	 */
+	void AddStop(Stop stop);
+
+
+	/**
+	 * Поиск остановки в базе данных
+	 */
+	const Stop* FindStop(std::string_view id) const;
+
+	/**
+	 * Добавляет маршрут в базу данных
+	 */
+	void AddBus(Bus bus);
+
+	/**
+	 * Поиск маршрута в базе данных
+	 */
+	const Bus* FindBus(std::string_view id) const;
+
+	/**
+	 * Возвращает информацию о маршруте
+	 */
+	const BusInfo GetBusInfo(const Bus* bus) const;
+
+	/**
+ 	 * Возвращает информацию о маршрутах через остановку
+ 	 */
+	std::set<std::string_view> GetBusesOnStop(const Stop*) const;
+
+private:
+	// Остановки
+	std::deque<Stop> stops_;
+	std::unordered_map<std::string_view, const Stop*> stopname_to_stop_;
+
+	// Маршруты
+	std::deque<Bus> buses_;
+	std::unordered_map<std::string_view, const Bus*> busname_to_bus_;
+
+	// Информация о маршрутах
+	std::unordered_map <const Bus*, BusInfo> buses_info_;
+
+	// Список маршрутов через остановку
+	std::unordered_map<const Stop*, std::set<std::string_view>> buses_on_stop_;
+
+	/**
+	 * Сбор информации о маршрутах
+	 */
+	void CollectionBusInfo(Bus* bus);
+};
+
+} // namespace transport
