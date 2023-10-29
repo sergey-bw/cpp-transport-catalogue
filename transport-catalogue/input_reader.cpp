@@ -105,14 +105,10 @@ void InputReader::ParseLine(std::string_view line) {
 void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
     using namespace std::literals;
 
-    /*
-    * Или лучше отсортировать вектор commands_ и сделать 1 цикл ???
-    */
-
     for (auto& item : commands_) {
         assert(item);
         if (item.command == "Stop"s) {
-            catalogue.AddStop(std::move(Stop{item.id, ParseCoordinates(item.description)}));
+            catalogue.AddStop(item.id, std::move(ParseCoordinates(item.description)));
         }
     }
 
@@ -120,12 +116,11 @@ void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) 
         if (item.command != "Bus"s) {
             continue;
         }
-        Bus bus;
-        bus.id = item.id;
+        std::vector<const Stop*> stops;
         for (auto& stop : ParseRoute(item.description)) {
-            bus.stops.push_back(catalogue.FindStop(stop));
+            stops.push_back(catalogue.FindStop(stop));
         }
-        catalogue.AddBus(std::move(bus));
+        catalogue.AddBus(item.id, std::move(stops));
     }
 }
 

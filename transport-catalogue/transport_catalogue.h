@@ -35,33 +35,30 @@ public:
 	/**
 	 * Добавляет остановку в базу данных
 	 */
-	void AddStop(Stop stop);
+	void AddStop(std::string id, geo::Coordinates coordinate);
 
 
 	/**
 	 * Поиск остановки в базе данных
 	 */
-	const Stop* FindStop(std::string_view id) const;
+	const Stop* FindStop(std::string_view id) const noexcept;
 
 	/**
 	 * Добавляет маршрут в базу данных
 	 */
-	void AddBus(Bus bus);
+	void AddBus(std::string id, std::vector<const Stop*> stops);
 
 	/**
 	 * Поиск маршрута в базе данных
 	 */
-	const Bus* FindBus(std::string_view id) const;
+	const Bus* FindBus(std::string_view id) const noexcept;
 
 	/**
 	 * Возвращает информацию о маршруте
 	 */
-	const BusInfo GetBusInfo(const Bus* bus) const;
+	const BusInfo GetBusInfo(const Bus* bus) const noexcept;
 
-	/**
- 	 * Возвращает информацию о маршрутах через остановку
- 	 */
-	std::set<std::string_view> GetBusesOnStop(const Stop*) const;
+	std::set<std::string_view> GetBusesOnStop(const Stop*) const noexcept;
 
 private:
 	// Остановки
@@ -81,7 +78,7 @@ private:
 	/**
 	 * Сбор информации о маршрутах
 	 */
-	void CollectionBusInfo(Bus* bus);
+	void CollectionBusInfo(const Bus* bus);
 };
 
 } // namespace transport

@@ -5,16 +5,16 @@ namespace transport {
 /**
  * Добавляет остановку в базу данных
  */
-void TransportCatalogue::AddStop(Stop stop) {
-    stops_.push_back(std::move(stop));
+void TransportCatalogue::AddStop(std::string id, geo::Coordinates coordinate) {
+    stops_.push_back({std::move(id), std::move(coordinate)});
     stopname_to_stop_[stops_.back().id] = &stops_.back();
 }
 
 /**
  * Поиск остановки в базе данных
- * Возвращает ссылку на структуру Stop для пользовательской реализации
+ * Возвращает указатель на структуру Stop для пользовательской реализации
  */
-const Stop* TransportCatalogue::FindStop(std::string_view id) const {
+const Stop* TransportCatalogue::FindStop(std::string_view id) const noexcept {
     if (stopname_to_stop_.count(id) == 0) {
         return nullptr;
     }
@@ -24,8 +24,8 @@ const Stop* TransportCatalogue::FindStop(std::string_view id) const {
 /**
  * Добавляет маршрут в базу данных
  */
-void TransportCatalogue::AddBus(Bus bus) {
-    buses_.push_back(std::move(bus));
+void TransportCatalogue::AddBus(std::string id, std::vector<const Stop*> stops) {
+    buses_.push_back({std::move(id), std::move(stops)});
     busname_to_bus_[buses_.back().id] = &buses_.back();
 
     // Собираем информацию о маршруте
@@ -36,7 +36,7 @@ void TransportCatalogue::AddBus(Bus bus) {
  * Поиск маршрута в базе данных
  * Возвращает указатель на структуру Bus для пользовательской реализации
  */
-const Bus* TransportCatalogue::FindBus(std::string_view id) const {
+const Bus* TransportCatalogue::FindBus(std::string_view id) const noexcept {
     if (busname_to_bus_.count(id) == 0) {
         return nullptr;
     }
@@ -45,9 +45,9 @@ const Bus* TransportCatalogue::FindBus(std::string_view id) const {
 
 /**
  * Возвращает информацию о маршруте
- * Возвращает ссылку на структуру Bus для пользовательской реализации
+ * Возвращает ссылку на структуру BusInfo для пользовательской реализации
  */
-const BusInfo TransportCatalogue::GetBusInfo(const Bus* bus) const {
+const BusInfo TransportCatalogue::GetBusInfo(const Bus* bus) const noexcept {
     if (buses_info_.count(bus) == 0) {
         return {};
     }
@@ -57,7 +57,7 @@ const BusInfo TransportCatalogue::GetBusInfo(const Bus* bus) const {
 /**
  * Возвращает информацию о маршрутах через остановку
  */
-std::set<std::string_view> TransportCatalogue::GetBusesOnStop(const Stop * stop) const {
+std::set<std::string_view> TransportCatalogue::GetBusesOnStop(const Stop * stop) const noexcept {
     if (buses_on_stop_.count(stop) == 0) {
         return {};
     }
@@ -67,7 +67,7 @@ std::set<std::string_view> TransportCatalogue::GetBusesOnStop(const Stop * stop)
 /**
  * Сбор информации о маршрутах
  */
-void TransportCatalogue::CollectionBusInfo(Bus* bus) {
+void TransportCatalogue::CollectionBusInfo(const Bus* bus) {
     BusInfo bus_info;
     bus_info.stop_count = bus->stops.size();
     std::set<std::string_view> unique_stop;
