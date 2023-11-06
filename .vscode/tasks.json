@@ -7,6 +7,9 @@
             "args": [
                 "${workspaceFolder}\\transport-catalogue\\*.cpp",
                 "-o",
+                //"-02",
+                //"-std=c++17",
+                //"-fsanitize=undefined",
                 "${fileDirname}\\output\\${fileBasenameNoExtension}.exe"
             ],
             "options": {
