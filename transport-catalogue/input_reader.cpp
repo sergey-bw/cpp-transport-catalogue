@@ -81,6 +81,7 @@ namespace transport::io {
         * match[i].str(2) - Название улицы - "Rossoshanskaya ulitsa"
         */
         for (const auto& match : matches) {
+            assert(match.ready());
             distances[std::move(match.str(2))] = static_cast<uint32_t>(std::stoi(match.str(1)));
         }
         return distances;
@@ -148,6 +149,12 @@ namespace transport::io {
         // Дистанции
         for (auto& [from, data] : distances) {
             for (auto& [to, distance] : data) {
+                if (catalogue.FindStop(from) == nullptr
+                    || catalogue.FindStop(to) == nullptr) {
+                        throw(std::invalid_argument("Stop not found"));
+                    }
+                assert(catalogue.FindStop(from) != nullptr);
+                assert(catalogue.FindStop(to) != nullptr);
                 catalogue.AddDistance(catalogue.FindStop(from), catalogue.FindStop(to), distance);
             }
         }

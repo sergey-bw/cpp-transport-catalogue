@@ -35,7 +35,7 @@ namespace transport {
 	class DistanceHasher {
 	public:
 		size_t operator()(std::pair<const Stop*, const Stop*> key) const {
-			return hasher(key.first) + hasher(key.first) * 37;
+			return hasher(key.first) + hasher(key.second) * 37;
 		}
 
 	private:

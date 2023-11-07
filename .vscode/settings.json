@@ -44,6 +44,11 @@
         "ostream": "cpp",
         "stdexcept": "cpp",
         "streambuf": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "bitset": "cpp",
+        "ctime": "cpp",
+        "set": "cpp",
+        "regex": "cpp",
+        "sstream": "cpp"
     }
 }
