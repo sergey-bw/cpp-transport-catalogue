@@ -1,14 +1,18 @@
-#include <stdexcept>
-
 #include "transport_catalogue.h"
 
-namespace transport {
+#include <stdexcept>
+
+namespace transport_catalogue {
+
+size_t DistanceHasher::operator()(std::pair<const Stop*, const Stop*> key) const {
+    return hasher(key.first) + hasher(key.second) * 37;
+}
 
 /**
  * Добавляет остановку в базу данных
  */
-void TransportCatalogue::AddStop(std::string id, geo::Coordinates coordinate) {
-    stops_.push_back({ std::move(id), std::move(coordinate) });
+void TransportCatalogue::AddStop(std::string id, geo::Coordinates coordinates) {
+    stops_.push_back({ std::move(id), coordinates });
     stopname_to_stop_[stops_.back().id] = &stops_.back();
 }
 
@@ -34,12 +38,12 @@ void TransportCatalogue::AddDistance(const Stop* from, const Stop* to, uint32_t 
 /**
  * Добавляет маршрут в базу данных
  */
-void TransportCatalogue::AddBus(std::string id, std::vector<const Stop*> stops) {
-    buses_.push_back({ std::move(id), std::move(stops) });
+void TransportCatalogue::AddBus(std::string id, std::vector<const Stop*> stops, bool is_roundtrip /* false */, const Stop* last_stop /* nullptr */) {
+    buses_.push_back({ std::move(id), std::move(stops), is_roundtrip, last_stop});
     busname_to_bus_[buses_.back().id] = &buses_.back();
 
     // Собираем информацию о маршруте
-    CollectionBusInfo(&buses_.back());
+    CollectionBusStat(&buses_.back());
 }
 
 /**
@@ -57,11 +61,11 @@ const Bus* TransportCatalogue::FindBus(std::string_view id) const noexcept {
  * Возвращает информацию о маршруте
  * Возвращает ссылку на структуру BusInfo для пользовательской реализации
  */
-const BusInfo TransportCatalogue::GetBusInfo(const Bus* bus) const noexcept {
-    if (buses_info_.count(bus) == 0) {
+const BusStat TransportCatalogue::GetBusStat(const Bus* bus) const noexcept {
+    if (buses_stat_.count(bus) == 0) {
         return {};
     }
-    return buses_info_.at(bus);
+    return buses_stat_.at(bus);
 }
 
 /**
@@ -72,6 +76,13 @@ std::set<std::string_view> TransportCatalogue::GetBusesOnStop(const Stop* stop) 
         return {};
     }
     return buses_on_stop_.at(stop);
+}
+
+/**
+* Возвращает все маршруты в сортированном контейнере
+*/
+const std::map<std::string_view, const Bus*> TransportCatalogue::GetAllBusesSorted() const {
+    return { busname_to_bus_.begin(), busname_to_bus_.end() };
 }
 
 /**
@@ -93,8 +104,8 @@ uint32_t TransportCatalogue::GetDistance(const Stop* from, const Stop* to) const
 /**
  * Сбор информации о маршрутах
  */
-void TransportCatalogue::CollectionBusInfo(const Bus* bus) {
-    BusInfo bus_info;
+void TransportCatalogue::CollectionBusStat(const Bus* bus) {
+    BusStat bus_info;
     bus_info.stop_count = bus->stops.size();
     std::set<std::string_view> unique_stop;
     const Stop* prev_stop = nullptr;
@@ -112,7 +123,7 @@ void TransportCatalogue::CollectionBusInfo(const Bus* bus) {
 
     bus_info.unique_stop_count = unique_stop.size();
     bus_info.curvature = bus_info.length / bus_info.curvature;
-    buses_info_[bus] = std::move(bus_info);
+    buses_stat_[bus] = std::move(bus_info);
 }
 
 } // namespace transport

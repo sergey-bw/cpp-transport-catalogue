@@ -1,34 +1,29 @@
+#include "json_reader.h"
+#include "map_renderer.h"
+#include "request_handler.h"
+
 #include <iostream>
 #include <string>
-
-#include "input_reader.h"
-#include "stat_reader.h"
 
 using namespace std;
 
 int main() {
-    transport::TransportCatalogue catalogue;
+    using namespace transport_catalogue;
+    TransportCatalogue tc;
+    renderer::MapRenderer map;
+    RequestHandler request_handler{ tc , map };
 
-    using namespace transport::io;
+    // Читаем json
+    io::JsonReader json_reader{ std::cin };
 
-    int base_request_count;
-    cin >> base_request_count >> ws;
+    // Формируем транспортный справочник из json
+    json_reader.FillCatalogue(tc);
 
-    {
-        InputReader reader;
-        for (int i = 0; i < base_request_count; ++i) {
-            string line;
-            getline(cin, line);
-            reader.ParseLine(line);
-        }
-        reader.ApplyCommands(catalogue);
-    }
+    // Получаем настройки Рендеринга
+    map.SetRenderSettings(json_reader.GetRendererSettings());
 
-    int stat_request_count;
-    cin >> stat_request_count >> ws;
-    for (int i = 0; i < stat_request_count; ++i) {
-        string line;
-        getline(cin, line);
-        ParseAndPrintStat(catalogue, line, cout);
-    }
+    // Парсим запросы к БД, получаем ответ в формате json и выводим в поток
+    json_reader.StatRequest(request_handler, std::cout);
+
+    return 0;
 }

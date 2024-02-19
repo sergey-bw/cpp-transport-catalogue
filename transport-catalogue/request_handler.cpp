@@ -1,0 +1,44 @@
+#include "json.h"
+#include "request_handler.h"
+#include "transport_catalogue.h"
+
+/*
+ * Здесь можно было бы разместить код обработчика запросов к базе, содержащего логику, которую не
+ * хотелось бы помещать ни в transport_catalogue, ни в json reader.
+ *
+ * Если вы затрудняетесь выбрать, что можно было бы поместить в этот файл,
+ * можете оставить его пустым.
+ */
+
+namespace transport_catalogue {
+
+RequestHandler::RequestHandler(const TransportCatalogue& tc, const renderer::MapRenderer& renderer)
+    : tc_(tc)
+    , renderer_(renderer)
+{
+}
+
+// Возвращает информацию о маршруте (запрос Bus)
+std::optional<BusStat> RequestHandler::GetBusStat(const std::string_view& bus_name) const {
+    if (auto bus_ptr = tc_.FindBus(bus_name); bus_ptr != nullptr) {
+        return tc_.GetBusStat(bus_ptr);
+    }
+    return std::nullopt;
+}
+
+// Возвращает маршруты, проходящие через
+std::optional <const std::set<std::string_view>> RequestHandler::GetBusesByStop(const std::string_view& stop_name) const {
+    StopPtr stop_ptr = tc_.FindStop(stop_name);
+    if (stop_ptr == nullptr) {
+        return std::nullopt;
+    }
+    return tc_.GetBusesOnStop(tc_.FindStop(stop_name));
+}
+
+// Возвращает SVG документ с картой маршрутов
+svg::Document RequestHandler::RenderMap() const
+{
+    return renderer_.GetSvgDocument(tc_.GetAllBusesSorted());
+}
+
+}  // namespace transport_catalogue

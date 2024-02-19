@@ -1,42 +1,22 @@
 #pragma once
 
+#include "geo.h"
+#include "domain.h"
+
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <set>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <unordered_map>
 
-#include "geo.h"
-
-namespace transport {
-
-// Остановки
-struct Stop {
-	std::string id;
-	geo::Coordinates coordinates;
-};
-
-// Маршруты
-struct Bus {
-	std::string id;
-	std::vector<const Stop*> stops;
-};
-
-// Информация о маршруте
-struct BusInfo {
-	size_t stop_count = 0;
-	size_t unique_stop_count = 0;
-	uint32_t length = 0;
-	double curvature = 0;
-};
+namespace transport_catalogue {
 
 class DistanceHasher {
 public:
-	size_t operator()(std::pair<const Stop*, const Stop*> key) const {
-		return hasher(key.first) + hasher(key.second) * 37;
-	}
+	size_t operator()(std::pair<const Stop*, const Stop*> key) const;
 
 private:
 	std::hash<const void*> hasher;
@@ -44,10 +24,11 @@ private:
 
 class TransportCatalogue {
 public:
+
 	/**
 	 * Добавляет остановку в базу данных
 	 */
-	void AddStop(std::string id, geo::Coordinates coordinate);
+	void AddStop(std::string id, geo::Coordinates coordinates);
 
 
 	/**
@@ -63,7 +44,7 @@ public:
 	/**
 	 * Добавляет маршрут в базу данных
 	 */
-	void AddBus(std::string id, std::vector<const Stop*> stops);
+	void AddBus(std::string id, std::vector<const Stop*> stops, bool is_roundtrip = false, const Stop* last_stop = nullptr);
 
 	/**
 	 * Поиск маршрута в базе данных
@@ -73,12 +54,17 @@ public:
 	/**
 	 * Возвращает информацию о маршруте
 	 */
-	const BusInfo GetBusInfo(const Bus* bus) const noexcept;
+	const BusStat GetBusStat(const Bus* bus) const noexcept;
 
 	/**
 	 * Возвращает информацию о маршрутах через остановку
 	 */
 	std::set<std::string_view> GetBusesOnStop(const Stop*) const noexcept;
+
+	/**
+	* Возвращает все маршруты в сортированном контейнере
+	*/
+	const std::map<std::string_view, const Bus*> GetAllBusesSorted() const;
 
 private:
 	// Остановки
@@ -93,20 +79,20 @@ private:
 	std::unordered_map<std::pair<const Stop*, const Stop*>, uint32_t, DistanceHasher> distanses_;
 
 	// Информация о маршрутах
-	std::unordered_map <const Bus*, BusInfo> buses_info_;
+	std::unordered_map <const Bus*, BusStat> buses_stat_;
 
 	// Список маршрутов через остановку
 	std::unordered_map<const Stop*, std::set<std::string_view>> buses_on_stop_;
 
 	/**
 	* Возвращает дистанцию между остановками
-		*/
+	*/
 	uint32_t GetDistance(const Stop* from, const Stop* to) const;
 
 	/**
 	 * Сбор информации о маршрутах
 	 */
-	void CollectionBusInfo(const Bus* bus);
+	void CollectionBusStat(const Bus* bus);
 };
 
 } // namespace transport
