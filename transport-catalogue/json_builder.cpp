@@ -205,7 +205,7 @@ Node Builder::Build() {
         throw std::logic_error("Object has not been built yet"s);
     }
     else if (root_.IsNull()) {
-        throw std::logic_error("Object is empty "s);
+        throw std::logic_error("Object is empty"s);
     }
     return root_;
 }
