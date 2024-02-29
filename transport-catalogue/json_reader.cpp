@@ -1,4 +1,5 @@
 #include "json_reader.h"
+#include "json_builder.h"
 
 #include <sstream>
 
@@ -19,21 +20,21 @@ void JsonReader::FillCatalogue(TransportCatalogue& tc) const {
 
     //Пасинг остановок
     for (const auto& node : JsonGetBaseRequest().AsArray()) {
-        if (node.AsMap().at("type"s).AsString() == "Stop"sv) {
+        if (node.AsDict().at("type"s).AsString() == "Stop"sv) {
             FillCatalogueStop(tc, node);
         }
     }
 
     //Пасинг дистанций
     for (const auto& node : JsonGetBaseRequest().AsArray()) {
-        if (node.AsMap().at("type"s).AsString() == "Stop"sv) {
-            FillCatalogueDistances(tc, node.AsMap().at("name"s).AsString(), node.AsMap().at("road_distances"s));
+        if (node.AsDict().at("type"s).AsString() == "Stop"sv) {
+            FillCatalogueDistances(tc, node.AsDict().at("name"s).AsString(), node.AsDict().at("road_distances"s));
         }
     }
 
     //Пасинг маршрутов
     for (const auto& node : JsonGetBaseRequest().AsArray()) {
-        if (node.AsMap().at("type"s).AsString() == "Bus"sv) {
+        if (node.AsDict().at("type"s).AsString() == "Bus"sv) {
             FillCatalogueBus(tc, node);
         }
     }
@@ -41,49 +42,58 @@ void JsonReader::FillCatalogue(TransportCatalogue& tc) const {
 
 void JsonReader::StatRequest(RequestHandler& request_handler, std::ostream& output) const {
     using namespace std::literals;
-    json::Array result; // string -> node
+    json::Builder json_builder{};
 
+    json_builder.StartArray();
     for (const auto& node : JsonGetStatRequest().AsArray()) {
-        json::Dict dict;
-        dict.emplace("request_id", node.AsMap().at("id"s).AsInt());
+        json_builder.StartDict().Key("request_id"s).Value(node.AsDict().at("id"s).AsInt());
 
         // Остановки
-        if (node.AsMap().at("type"s).AsString() == "Stop"sv) {
-            auto stops_set = request_handler.GetBusesByStop(node.AsMap().at("name"s).AsString());
+        if (node.AsDict().at("type"s).AsString() == "Stop"sv) {
+            auto stops_set = request_handler.GetBusesByStop(node.AsDict().at("name"s).AsString());
             if (stops_set) {
-                json::Array stops;
+                json_builder.Key("buses"s).StartArray();
                 for (auto& item : *stops_set) {
-                    stops.push_back(std::string(item));
+                    json_builder.Value(std::string(item));
                 }
-                dict.emplace("buses", stops);
-            } else {
-                dict.emplace("error_message"s, "not found"s);
+                json_builder.EndArray();
+            }
+            else {
+                json_builder.Key("error_message"s).Value("not found"s);
             }
         }
 
         // Маршруты
-        if (node.AsMap().at("type"s).AsString() == "Bus"sv) {
-            auto bus_stat = request_handler.GetBusStat(node.AsMap().at("name"s).AsString());
+        if (node.AsDict().at("type"s).AsString() == "Bus"sv) {
+            auto bus_stat = request_handler.GetBusStat(node.AsDict().at("name"s).AsString());
             if (bus_stat) {
-                dict.emplace("stop_count"s, static_cast<int>(bus_stat->stop_count));
-                dict.emplace("unique_stop_count"s, static_cast<int>(bus_stat->unique_stop_count));
-                dict.emplace("route_length"s, static_cast<int>(bus_stat->length));
-                dict.emplace("curvature"s, bus_stat->curvature);
-            } else {
-                dict.emplace("error_message"s, "not found"s);
+                json_builder
+                    .Key("stop_count"s).Value(static_cast<int>(bus_stat->stop_count))
+                    .Key("unique_stop_count"s).Value(static_cast<int>(bus_stat->unique_stop_count))
+                    .Key("route_length"s).Value(static_cast<int>(bus_stat->length))
+                    .Key("curvature"s).Value(bus_stat->curvature);
+            }
+            else {
+                json_builder.Key("error_message"s).Value("not found"s);
             }
         }
 
         // Карта
-        if (node.AsMap().at("type"s).AsString() == "Map"sv) {
+        if (node.AsDict().at("type"s).AsString() == "Map"sv) {
             std::ostringstream map;
             request_handler.RenderMap().Render(map);
-            dict.emplace("map"s, map.str());
+            json_builder.Key("map"s).Value(map.str());
         }
-
-        result.push_back(dict);
+        json_builder.EndDict();
     }
-    json::Print(json::Document{ result }, output);
+    json_builder.EndArray();
+
+    json::Print(
+        json::Document{
+            json_builder.Build()
+        },
+        output
+    );
 }
 
 renderer::RenderSettings JsonReader::GetRendererSettings() const {
@@ -94,30 +104,30 @@ renderer::RenderSettings JsonReader::GetRendererSettings() const {
 
     renderer::RenderSettings render_settings = {};
 
-    render_settings.width = JsonGetRenderSettings().AsMap().at("width").AsDouble();
-    render_settings.height = JsonGetRenderSettings().AsMap().at("height").AsDouble();
+    render_settings.width = JsonGetRenderSettings().AsDict().at("width").AsDouble();
+    render_settings.height = JsonGetRenderSettings().AsDict().at("height").AsDouble();
 
-    render_settings.padding = JsonGetRenderSettings().AsMap().at("padding").AsDouble();
+    render_settings.padding = JsonGetRenderSettings().AsDict().at("padding").AsDouble();
 
-    render_settings.line_width = JsonGetRenderSettings().AsMap().at("line_width").AsDouble();
-    render_settings.stop_radius = JsonGetRenderSettings().AsMap().at("stop_radius").AsDouble();
+    render_settings.line_width = JsonGetRenderSettings().AsDict().at("line_width").AsDouble();
+    render_settings.stop_radius = JsonGetRenderSettings().AsDict().at("stop_radius").AsDouble();
 
-    render_settings.bus_label_font_size = JsonGetRenderSettings().AsMap().at("bus_label_font_size").AsDouble();
+    render_settings.bus_label_font_size = JsonGetRenderSettings().AsDict().at("bus_label_font_size").AsDouble();
     render_settings.bus_label_offset = {
-        JsonGetRenderSettings().AsMap().at("bus_label_offset").AsArray()[0].AsDouble(),
-        JsonGetRenderSettings().AsMap().at("bus_label_offset").AsArray()[1].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("bus_label_offset").AsArray()[0].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("bus_label_offset").AsArray()[1].AsDouble(),
     };
 
-    render_settings.stop_label_font_size = JsonGetRenderSettings().AsMap().at("stop_label_font_size").AsDouble();
+    render_settings.stop_label_font_size = JsonGetRenderSettings().AsDict().at("stop_label_font_size").AsDouble();
     render_settings.stop_label_offset = {
-        JsonGetRenderSettings().AsMap().at("stop_label_offset").AsArray()[0].AsDouble(),
-        JsonGetRenderSettings().AsMap().at("stop_label_offset").AsArray()[1].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("stop_label_offset").AsArray()[0].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("stop_label_offset").AsArray()[1].AsDouble(),
     };
 
-    render_settings.underlayer_color = JsonParseColor(JsonGetRenderSettings().AsMap().at("underlayer_color"));
-    render_settings.underlayer_width = JsonGetRenderSettings().AsMap().at("underlayer_width").AsDouble();
+    render_settings.underlayer_color = JsonParseColor(JsonGetRenderSettings().AsDict().at("underlayer_color"));
+    render_settings.underlayer_width = JsonGetRenderSettings().AsDict().at("underlayer_width").AsDouble();
 
-    for (const json::Node& item : JsonGetRenderSettings().AsMap().at("color_palette").AsArray()) {
+    for (const json::Node& item : JsonGetRenderSettings().AsDict().at("color_palette").AsArray()) {
         render_settings.color_palette.push_back(JsonParseColor(item));
     }
 
@@ -126,32 +136,32 @@ renderer::RenderSettings JsonReader::GetRendererSettings() const {
 
 const json::Node& JsonReader::JsonGetBaseRequest() const {
     using namespace std::literals;
-    if (document_.GetRoot().AsMap().count("base_requests"s) == 0) {
+    if (document_.GetRoot().AsDict().count("base_requests"s) == 0) {
         throw(json::ParsingError("Base request not found"));
     }
-    return document_.GetRoot().AsMap().at("base_requests"s);
+    return document_.GetRoot().AsDict().at("base_requests"s);
 }
 
 const json::Node& JsonReader::JsonGetStatRequest() const {
     using namespace std::literals;
-    if (document_.GetRoot().AsMap().count("stat_requests"s) == 0) {
+    if (document_.GetRoot().AsDict().count("stat_requests"s) == 0) {
         throw(json::ParsingError("Stat request not found"s));
     }
-    return document_.GetRoot().AsMap().at("stat_requests"s);
+    return document_.GetRoot().AsDict().at("stat_requests"s);
 }
 
 const json::Node& JsonReader::JsonGetRenderSettings() const {
     using namespace std::literals;
-    if (document_.GetRoot().AsMap().count("render_settings"s) == 0) {
+    if (document_.GetRoot().AsDict().count("render_settings"s) == 0) {
         throw(json::ParsingError("Render settings not found"));
     }
-    return document_.GetRoot().AsMap().at("render_settings"s);
+    return document_.GetRoot().AsDict().at("render_settings"s);
 }
 
 void JsonReader::FillCatalogueStop(TransportCatalogue& tc, const json::Node& stop_node) const {
     using namespace std::literals;
-    tc.AddStop(stop_node.AsMap().at("name"s).AsString()
-        , { stop_node.AsMap().at("latitude"s).AsDouble(), stop_node.AsMap().at("longitude"s).AsDouble() }
+    tc.AddStop(stop_node.AsDict().at("name"s).AsString()
+        , { stop_node.AsDict().at("latitude"s).AsDouble(), stop_node.AsDict().at("longitude"s).AsDouble() }
     );
 }
 
@@ -162,7 +172,7 @@ void JsonReader::FillCatalogueDistances(TransportCatalogue& tc, const std::strin
         throw(json::ParsingError("Failed parsing Distances: Stop \""s + std::string(from) + "\" not found"s));
     }
 
-    for (auto& [stop, distance_node] : distances_node.AsMap()) {
+    for (auto& [stop, distance_node] : distances_node.AsDict()) {
         auto stop_to_ptr = tc.FindStop(stop);
         if (stop_to_ptr == nullptr) {
             throw(json::ParsingError("Failed parsing Distances: Stop \""s + stop + "\" not found"s));
@@ -174,7 +184,7 @@ void JsonReader::FillCatalogueDistances(TransportCatalogue& tc, const std::strin
 void JsonReader::FillCatalogueBus(TransportCatalogue& tc, const json::Node& bus_node) const {
     using namespace std::literals;
     std::vector<const Stop*> stops;
-    for (auto& stop_node : bus_node.AsMap().at("stops"s).AsArray()) {
+    for (auto& stop_node : bus_node.AsDict().at("stops"s).AsArray()) {
         auto stop_ptr = tc.FindStop(stop_node.AsString());
         if (stop_ptr == nullptr) {
             throw(json::ParsingError("Failed parsing Bus: Stop \""s + stop_node.AsString() + "\" not found"s));
@@ -185,12 +195,12 @@ void JsonReader::FillCatalogueBus(TransportCatalogue& tc, const json::Node& bus_
     const Stop* last_stop = nullptr;
 
     // Если маршрут некольцевой, автобус едет по нему в обратную сторону
-    if (!bus_node.AsMap().at("is_roundtrip").AsBool()) {
+    if (!bus_node.AsDict().at("is_roundtrip").AsBool()) {
         last_stop = stops.back();
         stops.insert(stops.end(), std::next(stops.rbegin()), stops.rend());
     }
 
-    tc.AddBus(bus_node.AsMap().at("name"s).AsString(), std::move(stops), bus_node.AsMap().at("is_roundtrip").AsBool(), last_stop);
+    tc.AddBus(bus_node.AsDict().at("name"s).AsString(), std::move(stops), bus_node.AsDict().at("is_roundtrip").AsBool(), last_stop);
 }
 
 svg::Color JsonReader::JsonParseColor(const json::Node& color_node) const {
@@ -202,17 +212,20 @@ svg::Color JsonReader::JsonParseColor(const json::Node& color_node) const {
                 static_cast<uint8_t>(color_node.AsArray()[1].AsInt()),
                 static_cast<uint8_t>(color_node.AsArray()[2].AsInt()),
             };
-        } else if (color_node.AsArray().size() == 4) { //RGBA
+        }
+        else if (color_node.AsArray().size() == 4) { //RGBA
             return svg::Rgba{
                 static_cast<uint8_t>(color_node.AsArray()[0].AsInt()),
                 static_cast<uint8_t>(color_node.AsArray()[1].AsInt()),
                 static_cast<uint8_t>(color_node.AsArray()[2].AsInt()),
                 color_node.AsArray()[3].AsDouble(),
             };
-        } else {
+        }
+        else {
             throw(json::ParsingError("Failed parsing Color"s));
         }
-    } else if (color_node.IsString()) { // string color
+    }
+    else if (color_node.IsString()) { // string color
         return color_node.AsString();
     }
 
@@ -221,7 +234,7 @@ svg::Color JsonReader::JsonParseColor(const json::Node& color_node) const {
 
 bool JsonReader::ISJsonRenderSettings() const {
     using namespace std::literals;
-    return document_.GetRoot().AsMap().count("render_settings"s) != 0;
+    return document_.GetRoot().AsDict().count("render_settings"s) != 0;
 }
 
 }  // namespace transport_catalogue::io
