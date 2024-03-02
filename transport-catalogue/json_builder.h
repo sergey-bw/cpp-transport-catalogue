@@ -7,17 +7,16 @@
 
 namespace json {
 
-class BaseItemContext;
-
-class DictItemContext;
-class ArrayItemContext;
-class DictKeyItemContext;
-class DictValueItemContext;
-class ArrayValueItemContext;
-
 class Builder {
-public:
+private:
+    class BaseItemContext;
+    class DictItemContext;
+    class ArrayItemContext;
+    class DictKeyItemContext;
+    class DictValueItemContext;
+    class ArrayValueItemContext;
 
+public:
     Builder() = default;
     ~Builder();
 
@@ -45,9 +44,12 @@ private:
     * Node<std::string> - Ключ словаря
     */
     std::vector<Node*> nodes_stack_;
+
+    void StartContainer(Node::Value value);
+    void AddValue(Node::Value value);
 };
 
-class BaseItemContext {
+class Builder::BaseItemContext {
 public:
     BaseItemContext() = delete;
     BaseItemContext(Builder& builder);
@@ -64,13 +66,13 @@ private:
     Builder& builder_;
 };
 
-class DictItemContext : public BaseItemContext {
+class Builder::DictItemContext : public BaseItemContext {
 public:
     DictItemContext(Builder& builder);
 
     // Разрешенные методы
     DictKeyItemContext Key(std::string key);
-    // EndDict(); Наследуем от BaseItemContext
+    // EndDict(); Определен в BaseItemContext
 
     // Запрещаем вызов
     DictItemContext StartDict() = delete;
@@ -80,7 +82,7 @@ public:
     json::Node Build() = delete;
 };
 
-class ArrayItemContext : public BaseItemContext {
+class Builder::ArrayItemContext : public BaseItemContext {
 public:
     ArrayItemContext(Builder& builder);
 
@@ -88,7 +90,7 @@ public:
     DictItemContext StartDict();
     ArrayItemContext StartArray();
     ArrayValueItemContext Value(Node::Value value);
-    // EndArray(); Наследуем от BaseItemContext
+    // EndArray(); Определен в BaseItemContext
 
     // Запрещенные методы
     BaseItemContext EndDict() = delete;
@@ -96,7 +98,7 @@ public:
     json::Node Build() = delete;
 };
 
-class DictKeyItemContext : public BaseItemContext {
+class Builder::DictKeyItemContext : public BaseItemContext {
 public:
     DictKeyItemContext(Builder& builder);
 
@@ -112,14 +114,14 @@ public:
     json::Node Build() = delete;
 };
 
-class DictValueItemContext : public BaseItemContext {
+class Builder::DictValueItemContext : public BaseItemContext {
 public:
     DictValueItemContext(Builder& builder);
     DictValueItemContext(BaseItemContext base_context);
 
     // Разрешенные методы
     DictKeyItemContext Key(std::string key);
-    //EndDict(); Наследуем от BaseItemContext
+    //EndDict(); Определен в BaseItemContext
 
     // Запрещенные методы
     DictItemContext StartDict() = delete;
@@ -129,7 +131,7 @@ public:
     json::Node Build() = delete;
 };
 
-class ArrayValueItemContext : public BaseItemContext {
+class Builder::ArrayValueItemContext : public BaseItemContext {
 public:
     ArrayValueItemContext(Builder& builder);
     ArrayValueItemContext(BaseItemContext base_context);
@@ -138,7 +140,7 @@ public:
     DictItemContext StartDict();
     ArrayItemContext StartArray();
     ArrayValueItemContext Value(Node::Value value);
-    //EndArray();  Наследуем от BaseItemContext
+    //EndArray(); Определен в BaseItemContext
 
     // Запрещенные методы
     BaseItemContext EndDict() = delete;
