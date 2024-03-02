@@ -91,7 +91,7 @@ void Builder::StartContainer(Node::Value value) {
     // Если вызывается вместо ключа словаря
     if (!nodes_stack_.empty() && nodes_stack_.back()->IsDict()) {
         throw std::logic_error("Object can't be a key dict"s);
-    };
+    }
 
     // Может быть первым элементом, элеменом массива и значением словоря
     nodes_stack_.emplace_back(new Node{ std::move(value) });
@@ -265,7 +265,7 @@ Builder::ArrayValueItemContext::ArrayValueItemContext(Builder& builder)
 }
 
 Builder::ArrayValueItemContext::ArrayValueItemContext(BaseItemContext base_context)
-    : Builder::BaseItemContext(std::move(base_context)) // Родительский конструктор перемещения
+    : Builder::BaseItemContext(std::move(base_context)) // Родительский конструктор копирования
 {
 }
 
