@@ -62,9 +62,29 @@ public:
 	std::set<std::string_view> GetBusesOnStop(const Stop*) const noexcept;
 
 	/**
+	* Возвращает количество остановок в справочнике
+	*/
+	size_t GetStopsCount() const noexcept;
+
+	/**
 	* Возвращает все маршруты в сортированном контейнере
 	*/
 	const std::map<std::string_view, const Bus*> GetAllBusesSorted() const;
+
+	/**
+	* Возвращает все маршруты в сортированном контейнере
+	*/
+	std::unordered_map<std::string_view, const Bus*> GetAllBuses() const;
+
+	/**
+	* Возвращает все остановки
+	*/
+	const std::unordered_map<std::string_view, const Stop*> GetAllStops() const;
+
+	/**
+	* Возвращает дистанцию между остановками
+	*/
+	uint32_t GetDistance(const Stop* from, const Stop* to) const;
 
 private:
 	// Остановки
@@ -83,11 +103,6 @@ private:
 
 	// Список маршрутов через остановку
 	std::unordered_map<const Stop*, std::set<std::string_view>> buses_on_stop_;
-
-	/**
-	* Возвращает дистанцию между остановками
-	*/
-	uint32_t GetDistance(const Stop* from, const Stop* to) const;
 
 	/**
 	 * Сбор информации о маршрутах

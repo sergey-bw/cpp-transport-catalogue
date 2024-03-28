@@ -79,10 +79,31 @@ std::set<std::string_view> TransportCatalogue::GetBusesOnStop(const Stop* stop) 
 }
 
 /**
+* Возвращает количество остановок в справочнике
+*/
+size_t TransportCatalogue::GetStopsCount() const noexcept {
+    return stops_.size();
+}
+
+/**
 * Возвращает все маршруты в сортированном контейнере
 */
 const std::map<std::string_view, const Bus*> TransportCatalogue::GetAllBusesSorted() const {
     return { busname_to_bus_.begin(), busname_to_bus_.end() };
+}
+
+/**
+* Возвращает все маршруты в сортированном контейнере
+*/
+std::unordered_map<std::string_view, const Bus*> TransportCatalogue::GetAllBuses() const {
+    return busname_to_bus_;
+}
+
+/**
+* Возвращает все остановки
+*/
+const std::unordered_map<std::string_view, const Stop*> TransportCatalogue::GetAllStops() const {
+    return stopname_to_stop_;
 }
 
 /**

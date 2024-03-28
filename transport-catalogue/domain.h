@@ -30,4 +30,23 @@ struct BusStat {
     double curvature = 0;
 };
 
+// Построение маршрута
+
+enum class ItemType {
+	BUS,
+	WAIT,
+};
+
+struct RouteItem {
+    ItemType type;
+    double time;
+    std::string_view name;
+    int span_count = 0;
+};
+
+struct RouteInfo {
+	std::vector<RouteItem> items;
+	double route_time = 0;
+};
+
 } // namespace transport_catalogue

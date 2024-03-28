@@ -2,6 +2,7 @@
 #include "json_builder.h"
 
 #include <sstream>
+#include <iostream>
 
 namespace transport_catalogue::io {
 
@@ -84,6 +85,37 @@ void JsonReader::StatRequest(RequestHandler& request_handler, std::ostream& outp
             request_handler.RenderMap().Render(map);
             json_builder.Key("map"s).Value(map.str());
         }
+        
+        // Маршруты
+        if (node.AsDict().at("type"s).AsString() == "Route"sv) {
+            const auto route = request_handler.GetRoute(node.AsDict().at("from"s).AsString(), node.AsDict().at("to"s).AsString());
+            if (route) {
+                json_builder.Key("total_time"s).Value(route->route_time);
+                json_builder.Key("items"s).StartArray();
+
+                for (const auto& item : route->items) {
+                    json_builder.StartDict();
+                    if (item.type == ItemType::WAIT) {
+                        json_builder.Key("stop_name"s).Value(std::string(item.name));
+                        json_builder.Key("time"s).Value(item.time);
+                        json_builder.Key("type"s).Value("Wait"s);
+                    }
+                    if (item.type == ItemType::BUS) {
+                        json_builder.Key("bus"s).Value(std::string(item.name));
+                        json_builder.Key("span_count"s).Value(item.span_count);
+                        json_builder.Key("time"s).Value(item.time);
+                        json_builder.Key("type"s).Value("Bus"s);
+                    }
+                    json_builder.EndDict();
+                }
+
+                json_builder.EndArray();
+            }
+            else {
+                json_builder.Key("error_message"s).Value("not found"s);
+            }
+        }
+
         json_builder.EndDict();
     }
     json_builder.EndArray();
@@ -97,6 +129,7 @@ void JsonReader::StatRequest(RequestHandler& request_handler, std::ostream& outp
 }
 
 renderer::RenderSettings JsonReader::GetRendererSettings() const {
+    using namespace std::literals;
     // Если в json нет настроек рендеринга, возврачаем структуру с настройками по умолчанию
     if (!ISJsonRenderSettings() || JsonGetRenderSettings().IsNull()) {
         return {};
@@ -104,34 +137,49 @@ renderer::RenderSettings JsonReader::GetRendererSettings() const {
 
     renderer::RenderSettings render_settings = {};
 
-    render_settings.width = JsonGetRenderSettings().AsDict().at("width").AsDouble();
-    render_settings.height = JsonGetRenderSettings().AsDict().at("height").AsDouble();
+    render_settings.width = JsonGetRenderSettings().AsDict().at("width"s).AsDouble();
+    render_settings.height = JsonGetRenderSettings().AsDict().at("height"s).AsDouble();
 
-    render_settings.padding = JsonGetRenderSettings().AsDict().at("padding").AsDouble();
+    render_settings.padding = JsonGetRenderSettings().AsDict().at("padding"s).AsDouble();
 
-    render_settings.line_width = JsonGetRenderSettings().AsDict().at("line_width").AsDouble();
-    render_settings.stop_radius = JsonGetRenderSettings().AsDict().at("stop_radius").AsDouble();
+    render_settings.line_width = JsonGetRenderSettings().AsDict().at("line_width"s).AsDouble();
+    render_settings.stop_radius = JsonGetRenderSettings().AsDict().at("stop_radius"s).AsDouble();
 
-    render_settings.bus_label_font_size = JsonGetRenderSettings().AsDict().at("bus_label_font_size").AsDouble();
+    render_settings.bus_label_font_size = JsonGetRenderSettings().AsDict().at("bus_label_font_size"s).AsDouble();
     render_settings.bus_label_offset = {
-        JsonGetRenderSettings().AsDict().at("bus_label_offset").AsArray()[0].AsDouble(),
-        JsonGetRenderSettings().AsDict().at("bus_label_offset").AsArray()[1].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("bus_label_offset"s).AsArray()[0].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("bus_label_offset"s).AsArray()[1].AsDouble(),
     };
 
-    render_settings.stop_label_font_size = JsonGetRenderSettings().AsDict().at("stop_label_font_size").AsDouble();
+    render_settings.stop_label_font_size = JsonGetRenderSettings().AsDict().at("stop_label_font_size"s).AsDouble();
     render_settings.stop_label_offset = {
-        JsonGetRenderSettings().AsDict().at("stop_label_offset").AsArray()[0].AsDouble(),
-        JsonGetRenderSettings().AsDict().at("stop_label_offset").AsArray()[1].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("stop_label_offset"s).AsArray()[0].AsDouble(),
+        JsonGetRenderSettings().AsDict().at("stop_label_offset"s).AsArray()[1].AsDouble(),
     };
 
-    render_settings.underlayer_color = JsonParseColor(JsonGetRenderSettings().AsDict().at("underlayer_color"));
-    render_settings.underlayer_width = JsonGetRenderSettings().AsDict().at("underlayer_width").AsDouble();
+    render_settings.underlayer_color = JsonParseColor(JsonGetRenderSettings().AsDict().at("underlayer_color"s));
+    render_settings.underlayer_width = JsonGetRenderSettings().AsDict().at("underlayer_width"s).AsDouble();
 
-    for (const json::Node& item : JsonGetRenderSettings().AsDict().at("color_palette").AsArray()) {
+    for (const json::Node& item : JsonGetRenderSettings().AsDict().at("color_palette"s).AsArray()) {
         render_settings.color_palette.push_back(JsonParseColor(item));
     }
 
     return render_settings;
+}
+
+RoutingSettings JsonReader::GetRoutingSettings() const {
+    using namespace std::literals;
+    // Если в json нет настроек построения маршрутов, возврачаем структуру с настройками по умолчанию
+    if (!ISJsonRoutingSettings() || JsonGetRoutingSettings().IsNull()) {
+        return {};
+    }
+
+    RoutingSettings routing_settings = {};
+
+    routing_settings.bus_velocity = JsonGetRoutingSettings().AsDict().at("bus_velocity"s).AsInt();
+    routing_settings.bus_wait_time = JsonGetRoutingSettings().AsDict().at("bus_wait_time"s).AsInt();
+
+    return routing_settings;
 }
 
 const json::Node& JsonReader::JsonGetBaseRequest() const {
@@ -152,10 +200,19 @@ const json::Node& JsonReader::JsonGetStatRequest() const {
 
 const json::Node& JsonReader::JsonGetRenderSettings() const {
     using namespace std::literals;
-    if (document_.GetRoot().AsDict().count("render_settings"s) == 0) {
+    if (!ISJsonRenderSettings()) {
         throw(json::ParsingError("Render settings not found"));
     }
     return document_.GetRoot().AsDict().at("render_settings"s);
+}
+
+
+const json::Node& JsonReader::JsonGetRoutingSettings() const {
+    using namespace std::literals;
+    if (!ISJsonRoutingSettings()) {
+        throw(json::ParsingError("Routing settings not found"));
+    }
+    return document_.GetRoot().AsDict().at("routing_settings"s);
 }
 
 void JsonReader::FillCatalogueStop(TransportCatalogue& tc, const json::Node& stop_node) const {
@@ -235,6 +292,11 @@ svg::Color JsonReader::JsonParseColor(const json::Node& color_node) const {
 bool JsonReader::ISJsonRenderSettings() const {
     using namespace std::literals;
     return document_.GetRoot().AsDict().count("render_settings"s) != 0;
+}
+
+bool JsonReader::ISJsonRoutingSettings() const {
+    using namespace std::literals;
+    return document_.GetRoot().AsDict().count("routing_settings"s) != 0;
 }
 
 }  // namespace transport_catalogue::io

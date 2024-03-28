@@ -12,9 +12,10 @@
 
 namespace transport_catalogue {
 
-RequestHandler::RequestHandler(const TransportCatalogue& tc, const renderer::MapRenderer& renderer)
+RequestHandler::RequestHandler(const TransportCatalogue& tc, const renderer::MapRenderer& renderer, const TransportRouter& router)
     : tc_(tc)
     , renderer_(renderer)
+    , router_(router)
 {
 }
 
@@ -39,6 +40,11 @@ std::optional <const std::set<std::string_view>> RequestHandler::GetBusesByStop(
 svg::Document RequestHandler::RenderMap() const
 {
     return renderer_.GetSvgDocument(tc_.GetAllBusesSorted());
+}
+
+// Возвращает информацию о построенном маршруте
+std::optional<RouteInfo> RequestHandler::GetRoute(const std::string_view from, const std::string_view to) const {
+    return router_.BuildRoute(from, to);
 }
 
 }  // namespace transport_catalogue

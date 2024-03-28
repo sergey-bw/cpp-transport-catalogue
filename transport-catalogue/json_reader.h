@@ -5,8 +5,6 @@
 #include "request_handler.h"
 #include "transport_catalogue.h"
 
-#include <iostream>
-
 /*
  * Здесь можно разместить код наполнения транспортного справочника данными из JSON,
  * а также код обработки запросов к базе и формирование массива ответов в формате JSON
@@ -26,6 +24,8 @@ public:
 
 	renderer::RenderSettings GetRendererSettings() const;
 
+	RoutingSettings GetRoutingSettings() const;
+
 private:
 	json::Document document_;
 
@@ -34,6 +34,8 @@ private:
 	const json::Node& JsonGetStatRequest() const;
 
 	const json::Node& JsonGetRenderSettings() const;
+
+	const json::Node& JsonGetRoutingSettings() const;
 
 	void FillCatalogueStop(TransportCatalogue& tc, const json::Node& stop_node) const;
 
@@ -44,6 +46,8 @@ private:
 	svg::Color JsonParseColor(const json::Node& color_node) const;
 
 	bool ISJsonRenderSettings() const;
+
+	bool ISJsonRoutingSettings() const;
 };
 
 }  // namespace transport_catalogue::io
