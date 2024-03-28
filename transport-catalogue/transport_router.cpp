@@ -1,7 +1,6 @@
 #include "transport_router.h"
 
 #include <utility>
-#include <iostream>
 
 namespace transport_catalogue {
 
@@ -32,7 +31,7 @@ void TransportRouter::BuildGraph(const TransportCatalogue& tc) {
 	graph::DirectedWeightedGraph<double> graph(tc.GetStopsCount() * 2);
 	graph::VertexId vertex_id {};
 
-	// Рёбра Wait (между чентой и нечетной вершиной) A(bus) - A1(Wait)
+	// Рёбра Wait
 	for (const auto& [stop_name, stop_ptr] : tc.GetAllStops()) {
 		stops_name_to_id_.insert({ stop_name, vertex_id });
 		auto edge_id = graph.AddEdge({ vertex_id, ++vertex_id , settings_.bus_wait_time * 1. });
@@ -68,11 +67,6 @@ void TransportRouter::BuildGraph(const TransportCatalogue& tc) {
 					}
 				});
 				++span_count;
-
-				//if (!bus_ptr->is_roundtrip && bus_ptr->stops[to + 1] == bus_ptr->last_stop) {
-				//	break; // На конечной выходим
-				//}
-				/**/
 			}
 		}
 	}

@@ -31,7 +31,6 @@ struct BusStat {
 };
 
 // Построение маршрута
-
 enum class ItemType {
 	BUS,
 	WAIT,
